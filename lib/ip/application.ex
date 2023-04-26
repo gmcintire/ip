@@ -13,10 +13,10 @@ defmodule Ip.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: Ip.PubSub},
       # Start the Endpoint (http/https)
-      IpWeb.Endpoint
+      IpWeb.Endpoint,
       # Start a worker by calling: Ip.Worker.start_link(arg)
       # {Ip.Worker, arg}
-      {Cluster.Supervisor, [topologies, [name: Ip.ClusterSupervisor]]},
+      {Cluster.Supervisor, [topologies, [name: Ip.ClusterSupervisor]]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
