@@ -7,6 +7,17 @@ defmodule Ip.Application do
 
   @impl true
   def start(_type, _args) do
+    topologies = [
+      ip: [
+        strategy: Elixir.Cluster.Strategy.Kubernetes.DNS,
+        config: [
+          service: "ip-headless",
+          application_name: "ip",
+          polling_interval: 10_000
+        ]
+      ]
+    ]
+
     children = [
       # Start the Telemetry supervisor
       IpWeb.Telemetry,

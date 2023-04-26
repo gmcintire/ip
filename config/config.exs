@@ -21,7 +21,10 @@ config :libcluster,
       config: [
         service: "ip-headless",
         application_name: "ip",
-        polling_interval: 10_000]]]
+        polling_interval: 10_000
+      ]
+    ]
+  ]
 
 # Configure esbuild (the version is required)
 config :esbuild,
