@@ -11,7 +11,7 @@ defmodule Ip.Application do
       ip: [
         strategy: Elixir.Cluster.Strategy.Kubernetes.DNS,
         config: [
-          service: "ip-headless",
+          service: "ip-service",
           application_name: "ip",
           polling_interval: 10_000
         ]
