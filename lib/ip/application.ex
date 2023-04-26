@@ -16,6 +16,7 @@ defmodule Ip.Application do
       IpWeb.Endpoint
       # Start a worker by calling: Ip.Worker.start_link(arg)
       # {Ip.Worker, arg}
+      {Cluster.Supervisor, [topologies, [name: Ip.ClusterSupervisor]]},
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

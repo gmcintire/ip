@@ -14,6 +14,15 @@ config :ip, IpWeb.Endpoint,
   pubsub_server: Ip.PubSub,
   live_view: [signing_salt: "TUadHaD7"]
 
+config :libcluster,
+  topologies: [
+    ip: [
+      strategy: Elixir.Cluster.Strategy.Kubernetes.DNS,
+      config: [
+        service: "ip-headless",
+        application_name: "ip",
+        polling_interval: 10_000]]]
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.14.29",
