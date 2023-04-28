@@ -47,4 +47,16 @@ if config_env() == :prod do
       port: port
     ],
     secret_key_base: secret_key_base
+
+  config :libcluster,
+    topologies: [
+      ip: [
+        strategy: Elixir.Cluster.Strategy.Kubernetes.DNS,
+        config: [
+          service: "ip-headless",
+          application_name: "ip",
+          polling_interval: 10_000
+        ]
+      ]
+    ]
 end
