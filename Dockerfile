@@ -70,7 +70,7 @@ FROM ${RUNNER_IMAGE}
 # RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 locales \
 #   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
-RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 locales ping telnet \
+RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 locales iputils-ping telnet \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # Set the locale
