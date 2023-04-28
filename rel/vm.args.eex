@@ -6,6 +6,3 @@
 
 ## Tweak GC to run more often
 ##-env ERL_FULLSWEEP_AFTER 10
-POD_A_RECORD=$(echo $MY_POD_IP | sed 's/\./-/g')
-CLUSTER_DOMAIN="cluster.local"    # correct value left as an exercise for the reader.
-erl -name app@"${POD_A_RECORD}.${MY_POD_NAMESPACE}.pod.${CLUSTER_DOMAIN}"
