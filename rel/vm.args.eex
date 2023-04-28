@@ -8,5 +8,4 @@
 ##-env ERL_FULLSWEEP_AFTER 10
 #-name ip@${POD_IP}
 #-kernel inet_dist_listen_min 5555 inet_dist_listen_max 5555
-#-name app@<%=`(hostname -f)`%>
 -name app@<%= "${POD_A_RECORD}.${NAMESPACE}.pod.cluster.local" %>
