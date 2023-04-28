@@ -6,4 +6,6 @@
 
 ## Tweak GC to run more often
 ##-env ERL_FULLSWEEP_AFTER 10
--name ip@${POD_IP}
+#-name ip@${POD_IP}
+#-kernel inet_dist_listen_min 5555 inet_dist_listen_max 5555
+-name app@<%=`(hostname -f)`%>

@@ -1,0 +1,147 @@
+#!/bin/bash
+function show_help
+{
+    echo "Usage: remote_observe (-options) <ssh_server_url> (<node_name>)"
+    echo ""
+    echo "  <name_name> is only required if there is more than one node"
+    echo "              running on the remote machine."
+    echo ""
+    echo "Options:"
+    echo ""
+    echo "  -e                Start an erlang shell instead of an elixir shell"
+    echo "  -l                Use long names instead of default short names"
+    echo "  -c <cookie>       Set the cookie value"
+    echo "  -h <cookie_home>  Looks for the cookie in <cookie_home>/.erlang.cookie"
+    echo "                    on the remote node"
+    echo "  -p <cookie_path>  Looks for the cookie in <cookie_path> on the remote"
+    echo "                    node"
+    echo ""
+    echo "Example:"
+    echo "  remote_observe -c secret dev.myserver.com"
+    echo "  remote_observe -p /opt/app/releases/COOKIE dev.myserver.com"
+    echo ""
+    exit
+}
+
+if [[ "$1" == "" ]]; then
+  show_help
+fi
+
+OPTIND=1
+use_erlang=0
+name=sname
+
+while getopts "?elc:p:h:" opt; do
+    case "$opt" in
+    \?)
+        show_help
+        exit 0
+        ;;
+    e)  use_erlang=1
+        ;;
+    l)  name=name
+        ;;
+    c)  COOKIE=$OPTARG
+        ;;
+    p)  COOKIE_PATH=$OPTARG
+        ;;
+    h)  COOKIE_HOME=$OPTARG
+        ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
+[ "${1:-}" = "--" ] && shift
+
+## Piping EPMD
+if [[ "$ERL_EPMD_PORT" == "" ]]; then
+  echo "Killing local epmd"
+  killall epmd -w 2> /dev/null
+  export ERL_EPMD_PORT="4369"
+fi
+echo "Epmd: $ERL_EPMD_PORT"
+
+echo "Connecting..."
+
+## Tmp dir for socket and config
+tmp_dir=$(mktemp -d)
+function cleanup
+{
+  echo $1
+  ## Closing background ssl tunnel and cleanin up
+  ssh -T -S $tmp_dir/socket -O "exit" $1 2> /dev/null
+  rm $tmp_dir/erl_inetrc 2> /dev/null
+  rmdir $tmp_dir
+  exit
+}
+
+# Unfortunately we can't remap epmd to a different port or we get {error, address}
+# Check erl_epmd:do_get_names/1 implementation
+opts="$opts -L $ERL_EPMD_PORT:localhost:$ERL_EPMD_PORT"
+
+## Creating background ssh tunnel with socket mappings
+ssh -f -N -T -M -S $tmp_dir/socket $opts $1 || cleanup "Couldn't connect"
+remote_do="ssh -S $tmp_dir/socket nil"
+
+epmd=$(epmd -names) || cleanup "Couldn't run epmd"
+
+# Ports
+ports=$(echo "$epmd" | tail -n +2 | cut -d' ' -f 5)
+
+# Finding the node name
+names=$(echo "$epmd" | tail -n +2 | cut -d' ' -f 2)
+# If there is more than one remote beam, we need to know which one to connect to
+len=$(echo "$names" | wc -w)
+if [[ "$len" == "0" ]]; then
+  cleanup "Did not find any remote beams"
+elif [[ "$len" == "1" ]]; then
+  node="$names"
+elif [[ "$2" != "" ]]; then
+  node="$2"
+else
+  echo "Identified multiple remote beams:"
+  cleanup "$names"
+fi
+echo "Node: $node"
+
+host=$($remote_do hostname)
+echo "Host: $host"
+
+## Detecting the secret distribution cookie
+if [[ "$COOKIE" == "" ]]; then
+  if [[ "$COOKIE_PATH" == "" ]]; then
+    if [[ "$COOKIE_HOME" == "" ]]; then
+      COOKIE_HOME="~"
+    fi
+    COOKIE_PATH="$COOKIE_HOME/.erlang.cookie"
+  fi
+  echo "Trying to load erlang cookie from $1:$COOKIE_PATH"
+  COOKIE=$($remote_do "cat $COOKIE_PATH")
+fi
+echo "Cookie: ${COOKIE:0:3}*****************"
+
+if [[ "$COOKIE" == "" ]]; then
+  cleanup "Could not determine the cookie"
+fi
+
+## Creating Port mappings for each remote beam
+for port in $ports; do
+  echo "Port: $port"
+   $($remote_do -O forward -L $port:localhost:$port)
+done
+
+## Overriding hostname lookup to convince local beam that it's running remote
+export ERL_INETRC=$tmp_dir/erl_inetrc
+echo "{host, {127,0,0,1}, [\"$host\", \"$node@$host\"]}." > $ERL_INETRC
+echo "{edns,0}." >> $ERL_INETRC
+echo "{lookup, [file, dns]}." >> $ERL_INETRC
+
+## Starting up beam
+if [[ $use_erlang == 1 ]]; then
+  erl -remsh "$node@$host" -hidden -setcookie "$COOKIE" "-$name" "remsh_$$@$host" -eval "observer:start()." 
+else
+  iex --hidden --cookie "$COOKIE" "--$name" "remsh_$$@$host" --remsh "$node@$host" --eval ":observer.start()"
+fi
+
+cleanup "Done"
