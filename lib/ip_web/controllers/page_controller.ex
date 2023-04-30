@@ -34,6 +34,6 @@ defmodule IpWeb.PageController do
         |> to_string()
       end
 
-    render(conn, "index.html", remote_ip: remote_ip)
+    render(conn, "index.html", remote_ip: remote_ip, conn: conn)
   end
 end
